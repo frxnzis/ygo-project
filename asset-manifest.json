@@ -1,16 +1,16 @@
 {
   "files": {
-    "main.css": "/ygo-project/static/css/main.5bd2768f.css",
-    "main.js": "/ygo-project/static/js/main.b7907519.js",
-    "static/js/787.fe95195a.chunk.js": "/ygo-project/static/js/787.fe95195a.chunk.js",
-    "static/media/ygo.png": "/ygo-project/static/media/ygo.70de033711bf451b2a42.png",
-    "index.html": "/ygo-project/index.html",
-    "main.5bd2768f.css.map": "/ygo-project/static/css/main.5bd2768f.css.map",
-    "main.b7907519.js.map": "/ygo-project/static/js/main.b7907519.js.map",
-    "787.fe95195a.chunk.js.map": "/ygo-project/static/js/787.fe95195a.chunk.js.map"
+    "main.css": "./static/css/main.3e64f5b1.css",
+    "main.js": "./static/js/main.3359706f.js",
+    "static/js/787.fe95195a.chunk.js": "./static/js/787.fe95195a.chunk.js",
+    "static/media/ygo.png": "./static/media/ygo.70de033711bf451b2a42.png",
+    "index.html": "./index.html",
+    "main.3e64f5b1.css.map": "./static/css/main.3e64f5b1.css.map",
+    "main.3359706f.js.map": "./static/js/main.3359706f.js.map",
+    "787.fe95195a.chunk.js.map": "./static/js/787.fe95195a.chunk.js.map"
   },
   "entrypoints": [
-    "static/css/main.5bd2768f.css",
-    "static/js/main.b7907519.js"
+    "static/css/main.3e64f5b1.css",
+    "static/js/main.3359706f.js"
   ]
 }
