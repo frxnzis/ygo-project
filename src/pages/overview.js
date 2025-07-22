@@ -16,6 +16,8 @@ import Slide from '@mui/material/Slide';
 import Zoom from '@mui/material/Zoom';
 import Fade from '@mui/material/Fade';
 import { Container } from '@mui/material';
+import Skeleton from '@mui/material/Skeleton';
+
 
 const Transition = forwardRef(function Transition(props, ref) {
     return <Zoom style={{ transitionDelay: '1ms' }} ref={ref} {...props} />;
@@ -30,7 +32,7 @@ export const Overview = (props) => {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.up('sm'));
 
-    const rowsPerPageOptions = [12, 24, 36, 100]
+    const rowsPerPageOptions = [8, 16, 24]
 
     const [cards, setCards] = useState([]);
     const [open, setOpen] = useState(false);
@@ -203,6 +205,7 @@ export const Overview = (props) => {
                     </DialogContent>
                 </Dialog>
 
+
                 {/* CARDS LIST */}
                 <Box sx={{ padding: 0, margin: 0 }}>
                     <Masonry columns={{ xs: 3, sm: 4, md: 6, lg: 8, xl: 9 }}
@@ -211,8 +214,8 @@ export const Overview = (props) => {
                             <div className={'hover14'} key={index}>
                                 <figure onClick={() => handleClickOpen(card)}>
                                     <img
-                                        src={`${card.card_images[0]?.image_url}?w=164&h=164&fit=crop&auto=format`}
-                                        srcSet={`${card.card_images[0]?.image_url}?w=164&h=164&fit=crop&auto=format&dpr=2 2x`}
+                                        src={`${card.card_images[0]?.image_url_small}?w=164&h=164&fit=crop&auto=format`}
+                                        srcSet={`${card.card_images[0]?.image_url_small}?w=164&h=164&fit=crop&auto=format&dpr=2 2x`}
                                         alt={card.name}
                                         loading="eager"
                                         style={{
@@ -231,7 +234,6 @@ export const Overview = (props) => {
                     </Masonry>
 
                     <TablePagination
-                        sx={{ color: "#565656" }}
                         component="div"
                         count={cards.length}
                         page={page}
@@ -240,6 +242,14 @@ export const Overview = (props) => {
                         rowsPerPageOptions={rowsPerPageOptions}
                         onRowsPerPageChange={handleChangeRowsPerPage}
                         labelRowsPerPage='Cards'
+                        sx={{
+                            '& .MuiTablePagination-selectLabel': {
+                            paddingTop: '1rem',
+                            },
+                            '& .MuiTablePagination-displayedRows': {
+                            paddingTop: '1rem',
+                            }
+                        }}
                     />
 
                 </Box>

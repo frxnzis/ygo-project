@@ -5,11 +5,12 @@ import Box from '@mui/material/Box';
 import Toolbar from '@mui/material/Toolbar';
 import Typography from '@mui/material/Typography';
 import InputBase from '@mui/material/InputBase';
-import SearchIcon from '@mui/icons-material/Search';
 import FilterAltIcon from '@mui/icons-material/FilterAlt';
 import MenuItem from '@mui/material/MenuItem';
 import Menu from '@mui/material/Menu';
 import LanguageIcon from '@mui/icons-material/Language';
+import SearchIcon from '@mui/icons-material/Search';
+import HelpIcon from '@mui/icons-material/Help';
 import IconButton from '@mui/material/IconButton';
 
 import Dialog from '@mui/material/Dialog';
@@ -74,7 +75,7 @@ export const MainNavbar = (props) => {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.up('sm'));
 
-    const [search, setSearch] = useState('');
+    const [inputSearch, setInputSearch] = useState('');
     const [anchorEl, setAnchorEl] = useState(null);
     const [language, setLanguage] = useState('');
     const [open, setOpen] = useState(false);
@@ -84,30 +85,20 @@ export const MainNavbar = (props) => {
     }
 
     useEffect(() => {
-        if (search && search.length > 0) {
-            const lang = language ? '&language=' + language : '';
-            // GET request using fetch with error handling
-            fetch('https://db.ygoprodeck.com/api/v7/cardinfo.php?fname=' + search + lang + '&misc=yes')
-                .then(async response => {
-                    const data = await response.json();
-                    sendData(data);
-
-                    // check for error response
-                    if (!response.ok) {
-                        // get error message from body or default to response statusText
-                        const error = (data && data.message) || response.statusText;
-                        return Promise.reject(error);
-                    }
-                })
-                .catch(error => {
-                    //console.error('There was an error!', error);
-                });
-        }
-    }, [search, language]);
+            handleSearch();
+    }, [language]);
 
     const handleChange = (event) => {
         const input = event.target.value;
-        setSearch(input);
+        setInputSearch(input);
+    }
+
+    const handleSearch = () => {
+        if (inputSearch && inputSearch.length>0){
+            console.log('Searching-card: ', inputSearch);
+            console.log('Searching-lang: ', language || 'en');
+            onSearch(inputSearch);
+        } 
     }
 
     const handleMenu = (event) => {
@@ -125,6 +116,29 @@ export const MainNavbar = (props) => {
     const handleCloseDialog = () => {
         setOpen(false);
     };
+
+    const onSearch = () => {
+        const lang = language ? '&language=' + language : '';
+            // GET request using fetch with error handling
+            fetch('https://db.ygoprodeck.com/api/v7/cardinfo.php?fname=' + inputSearch + lang + '&misc=yes')
+                .then(async response => {
+                    const data = await response.json();
+                    console.log(data);
+                    sendData(data);
+
+                    // check for error response
+                    if (!response.ok) {
+                        // get error message from body or default to response statusText
+                        const error = (data && data.message) || response.statusText;
+                        return Promise.reject(error);
+                    }
+                })
+                .catch(error => {
+                    //console.error('There was an error!', error);
+                    console.log(error);
+                });
+    }
+    
 
     return (
 
@@ -152,8 +166,30 @@ export const MainNavbar = (props) => {
             >
 
                 <DialogContent className={'row m-0 p-0'} variant="outlined">
-                    <div className={'col-12 text-center m-0 p-0'} >
-
+                    <div className={'col-12 text-left m-0 p-4'} >
+                        <h5><p><b>Welcome to the Yu-Gi-Oh! card finder</b></p></h5>
+                        <p><b>🔎  Examples of card searches:</b></p>
+                        <ul>
+                            <li>Magician</li>
+                            <li>Dragon</li>
+                            <li>Zombie</li>
+                            <li>Warrior</li>
+                            <li>Exodia</li>
+                        </ul>
+                        {/* Firma */}
+                        <div style={{
+                            marginTop: '2rem',
+                            textAlign: 'center',
+                            fontStyle: 'italic',
+                            fontSize: '0.9rem',
+                            color: '#666',
+                            borderTop: '1px solid #ddd',
+                            paddingTop: '1rem',
+                            position: 'relative'
+                        }}>
+                            Made with <span style={{ color: '#e25555' }}>❤️</span> by 
+                            <span style={{ color: '#585858', fontWeight: 'bold', marginLeft: '0.3rem' }}>Francis</span>
+                        </div>
                     </div>
                 </DialogContent>
             </Dialog>
@@ -188,13 +224,36 @@ export const MainNavbar = (props) => {
                     />
 
                     {/* SEARCH INPUT */}
-                    <Search style={{ margin: 'auto' }}>
-                        <StyledInputBase
-                            padding={0}
-                            margin={0}
-                            onChange={handleChange}
-                            placeholder="Search cards…"
+                    <Search 
+                     style={{
+                        margin: 'auto',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        width: '400px',
+                    }}
+                    >
+                    <StyledInputBase
+                        
+                        onChange={handleChange}
+                        placeholder="Search cards…"
+                        style={{
+                        width: '100%',
+                        paddingRight: '40px',
+                        }}
                         />
+                    <IconButton
+                        size="small"
+                        aria-label="language"
+                        aria-controls="menu-appbar"
+                        aria-haspopup="true"
+                        onClick={handleSearch}
+                        color="inherit"
+                        title='Search cards'
+                    >
+                        <SearchIcon />
+                    </IconButton>
+                  
                     </Search>
 
                     {/* FILTER */}
@@ -220,9 +279,24 @@ export const MainNavbar = (props) => {
                         aria-haspopup="true"
                         onClick={handleMenu}
                         color="inherit"
+                        title='Select Language'
                     >
                         <LanguageIcon />
                     </IconButton>
+
+                     {/* HELP */}
+                    <IconButton
+                        size="small"
+                        aria-label="help"
+                        aria-controls="menu-appbar"
+                        aria-haspopup="true"
+                        onClick={handleOpenDialog}
+                        color="inherit"
+                        title='Help'
+                    >
+                        <HelpIcon />
+                    </IconButton>
+
                     <Menu
                         id="menu-appbar"
                         anchorEl={anchorEl}
@@ -238,11 +312,11 @@ export const MainNavbar = (props) => {
                         open={Boolean(anchorEl)}
                         onClose={handleClose}
                     >
-                        <MenuItem onClick={() => { setLanguage(''); setAnchorEl(null); }}>English</MenuItem>
-                        <MenuItem onClick={() => { setLanguage('it'); setAnchorEl(null); }}>Italian</MenuItem>
-                        <MenuItem onClick={() => { setLanguage('fr'); setAnchorEl(null); }}>French</MenuItem>
-                        <MenuItem onClick={() => { setLanguage('de'); setAnchorEl(null); }}>German</MenuItem>
-                        <MenuItem onClick={() => { setLanguage('pt'); setAnchorEl(null); }}>Portuguese</MenuItem>
+                        <MenuItem onClick={() => { setLanguage(''); setAnchorEl(null); }}>🇬🇧 English</MenuItem>
+                        <MenuItem onClick={() => { setLanguage('fr'); setAnchorEl(null); }}>🇫🇷 French</MenuItem>
+                        <MenuItem onClick={() => { setLanguage('de'); setAnchorEl(null); }}>🇩🇪 German</MenuItem>
+                        <MenuItem onClick={() => { setLanguage('it'); setAnchorEl(null); }}>🇮🇹 Italian</MenuItem>
+                        <MenuItem onClick={() => { setLanguage('pt'); setAnchorEl(null); }}>🇵🇹 Portuguese</MenuItem>
                     </Menu>
 
                 </Toolbar>
