@@ -6,14 +6,15 @@ import { styled } from '@mui/material/styles';
 import './App.scss';
 
 const MainLayoutRoot = styled('div')(({ theme }) => ({
-  backgroundColor: '#efefef',
+  backgroundColor: 'lightgrey',
   height: '100%',
   paddingTop: 0
 }));
 
 const ContentLayout = styled('div')(({ theme }) => ({
   height: '100%',
-  margin: 40
+  margin: 40,
+  backgroundColor: 'lightgrey',
 }));
 
 export default function App({ children }) {
