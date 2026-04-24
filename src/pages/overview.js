@@ -1,37 +1,20 @@
-import { useState, useEffect, Fragment, forwardRef } from 'react';
-import ImageList from '@mui/material/ImageList';
-import ImageListItem from '@mui/material/ImageListItem';
+import { useState, useEffect, forwardRef } from 'react';
 import Dialog from '@mui/material/Dialog';
 import DialogContent from '@mui/material/DialogContent';
 import DialogContentText from '@mui/material/DialogContentText';
-import useMediaQuery from '@mui/material/useMediaQuery';
-import { useTheme } from '@mui/material/styles';
 import Box from '@mui/material/Box';
-import Paper from '@mui/material/Paper';
 import '../App.scss';
 import TablePagination from '@mui/material/TablePagination';
-import Masonry from '@mui/lab/Masonry';
 
 import Slide from '@mui/material/Slide';
-import Zoom from '@mui/material/Zoom';
-import Fade from '@mui/material/Fade';
-import { Container } from '@mui/material';
-import Skeleton from '@mui/material/Skeleton';
+import CircularProgress from '@mui/material/CircularProgress';
 
-
-const Transition = forwardRef(function Transition(props, ref) {
-    return <Zoom style={{ transitionDelay: '1ms' }} ref={ref} {...props} />;
-});
 
 const Transition2 = forwardRef(function Transition(props, ref) {
     return <Slide direction="up" ref={ref} {...props} />;
 });
 
 export const Overview = (props) => {
-
-    const theme = useTheme();
-    const isMobile = useMediaQuery(theme.breakpoints.up('sm'));
-
     const rowsPerPageOptions = [8, 16, 24]
 
     const [cards, setCards] = useState([]);
@@ -86,6 +69,27 @@ export const Overview = (props) => {
         const imgHeight = cardImg.clientHeight;
         setDialogHeight(imgHeight + 3);
     };
+
+    if (props.cardsSearch?.loading) {
+        return (
+            <Box
+                sx={{
+                    alignItems: 'center',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 2,
+                    justifyContent: 'center',
+                    minHeight: 320,
+                    textAlign: 'center'
+                }}
+            >
+                <CircularProgress />
+                <div style={{ fontSize: '1.2rem', fontStyle: 'italic' }}>
+                    Searching cards...
+                </div>
+            </Box>
+        );
+    }
 
 
     if (cards.length > 0) {
@@ -208,10 +212,21 @@ export const Overview = (props) => {
 
                 {/* CARDS LIST */}
                 <Box sx={{ padding: 0, margin: 0 }}>
-                    <Masonry columns={{ xs: 3, sm: 4, md: 6, lg: 8, xl: 9 }}
-                        spacing={{ xs: 1, sm: 2, md: 2, lg: 2, xl: 3 }}>
+                    <Box
+                        sx={{
+                            display: 'grid',
+                            gap: { xs: 1, sm: 2, md: 2, lg: 2, xl: 3 },
+                            gridTemplateColumns: {
+                                xs: 'repeat(3, minmax(0, 1fr))',
+                                sm: 'repeat(4, minmax(0, 1fr))',
+                                md: 'repeat(6, minmax(0, 1fr))',
+                                lg: 'repeat(8, minmax(0, 1fr))',
+                                xl: 'repeat(9, minmax(0, 1fr))'
+                            }
+                        }}
+                    >
                         {xcards.map((card, index) => (
-                            <div className={'hover14'} key={index}>
+                            <div className={'hover14'} key={card.id || index}>
                                 <figure onClick={() => handleClickOpen(card)}>
                                     <img
                                         src={`${card.card_images[0]?.image_url_small}?w=164&h=164&fit=crop&auto=format`}
@@ -231,7 +246,7 @@ export const Overview = (props) => {
                                 </figure>
                             </div>
                         ))}
-                    </Masonry>
+                    </Box>
 
                     <TablePagination
                         component="div"

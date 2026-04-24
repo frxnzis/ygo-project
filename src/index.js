@@ -4,6 +4,26 @@ import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
 
+const ignoredResizeObserverErrors = [
+  'ResizeObserver loop completed with undelivered notifications.',
+  'ResizeObserver loop limit exceeded'
+];
+
+window.addEventListener('error', (event) => {
+  if (ignoredResizeObserverErrors.includes(event.message)) {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+  }
+});
+
+window.onerror = (message) => {
+  if (ignoredResizeObserverErrors.includes(message)) {
+    return true;
+  }
+
+  return false;
+};
+
 ReactDOM.render(
   <React.StrictMode>
     <App />

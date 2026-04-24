@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { MainNavbar } from './components/main-navbar';
 import { Overview } from './pages/overview'
 import PropTypes from 'prop-types';
@@ -19,17 +19,24 @@ const ContentLayout = styled('div')(({ theme }) => ({
 
 export default function App({ children }) {
 
-  const [data, setData] = useState([]);
+  const [cardsSearch, setCardsSearch] = useState({
+    data: [],
+    loading: false,
+    error: ''
+  });
 
   const callbackFunction = (data) => {
-    setData(data);
+    setCardsSearch((previousState) => ({
+      ...previousState,
+      ...data
+    }));
   }
 
   return (
     <MainLayoutRoot>
       <MainNavbar parentCallback={callbackFunction} />
       <ContentLayout>
-        <Overview cardsSearch={data} ></Overview>
+        <Overview cardsSearch={cardsSearch} ></Overview>
       </ContentLayout>
 
 

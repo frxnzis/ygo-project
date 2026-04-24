@@ -1,4 +1,4 @@
-import { useEffect, useState, createContext, forwardRef } from 'react';
+import { useCallback, useEffect, useRef, useState, createContext, forwardRef } from 'react';
 import { styled, alpha } from '@mui/material/styles';
 import AppBar from '@mui/material/AppBar';
 import Box from '@mui/material/Box';
@@ -71,6 +71,7 @@ const StyledInputBase = styled(InputBase)(({ theme }) => ({
 const Name = createContext();
 
 export const MainNavbar = (props) => {
+    const { parentCallback } = props;
 
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.up('sm'));
@@ -79,26 +80,24 @@ export const MainNavbar = (props) => {
     const [anchorEl, setAnchorEl] = useState(null);
     const [language, setLanguage] = useState('');
     const [open, setOpen] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const searchInProgress = useRef(false);
+    const lastSubmittedSearch = useRef('');
+    const isFirstLanguageRender = useRef(true);
 
-    const sendData = (data) => {
-        props.parentCallback(data);
-    }
-
-    useEffect(() => {
-            handleSearch();
-    }, [language]);
+    const sendData = useCallback((data) => {
+        parentCallback(data);
+    }, [parentCallback]);
 
     const handleChange = (event) => {
         const input = event.target.value;
         setInputSearch(input);
     }
 
-    const handleSearch = () => {
-        if (inputSearch && inputSearch.length>0){
-            console.log('Searching-card: ', inputSearch);
-            console.log('Searching-lang: ', language || 'en');
-            onSearch(inputSearch);
-        } 
+    const handleKeyDown = (event) => {
+        if (event.key === 'Enter' && !loading) {
+            handleSearch();
+        }
     }
 
     const handleMenu = (event) => {
@@ -117,27 +116,60 @@ export const MainNavbar = (props) => {
         setOpen(false);
     };
 
-    const onSearch = () => {
-        const lang = language ? '&language=' + language : '';
-            // GET request using fetch with error handling
-            fetch('https://db.ygoprodeck.com/api/v7/cardinfo.php?fname=' + inputSearch + lang + '&misc=yes')
-                .then(async response => {
-                    const data = await response.json();
-                    console.log(data);
-                    sendData(data);
+    const onSearch = useCallback(async (searchValue) => {
+        if (searchInProgress.current) {
+            return;
+        }
 
-                    // check for error response
-                    if (!response.ok) {
-                        // get error message from body or default to response statusText
-                        const error = (data && data.message) || response.statusText;
-                        return Promise.reject(error);
-                    }
-                })
-                .catch(error => {
-                    //console.error('There was an error!', error);
-                    console.log(error);
-                });
-    }
+        if (!searchValue) {
+            return;
+        }
+
+        const params = new URLSearchParams({
+            fname: searchValue,
+            misc: 'yes'
+        });
+
+        if (language) {
+            params.set('language', language);
+        }
+
+        searchInProgress.current = true;
+        setLoading(true);
+        sendData({ loading: true, error: '' });
+
+        try {
+            const response = await fetch(`https://db.ygoprodeck.com/api/v7/cardinfo.php?${params.toString()}`);
+            const data = await response.json();
+
+            if (!response.ok) {
+                const error = (data && data.error) || (data && data.message) || response.statusText;
+                throw new Error(error);
+            }
+
+            sendData({ ...data, loading: false, error: '' });
+        } catch (error) {
+            sendData({ data: [], loading: false, error: error.message });
+        } finally {
+            searchInProgress.current = false;
+            setLoading(false);
+        }
+    }, [language, sendData]);
+
+    const handleSearch = useCallback(() => {
+        const searchValue = inputSearch.trim();
+        lastSubmittedSearch.current = searchValue;
+        onSearch(searchValue);
+    }, [inputSearch, onSearch]);
+
+    useEffect(() => {
+        if (isFirstLanguageRender.current) {
+            isFirstLanguageRender.current = false;
+            return;
+        }
+
+        onSearch(lastSubmittedSearch.current);
+    }, [language, onSearch]);
     
 
     return (
@@ -233,9 +265,10 @@ export const MainNavbar = (props) => {
                         width: '400px',
                     }}
                     >
-                    <StyledInputBase
+                        <StyledInputBase
                         
                         onChange={handleChange}
+                        onKeyDown={handleKeyDown}
                         placeholder="Search cards…"
                         style={{
                         width: '100%',
@@ -250,6 +283,7 @@ export const MainNavbar = (props) => {
                         onClick={handleSearch}
                         color="inherit"
                         title='Search cards'
+                        disabled={loading}
                     >
                         <SearchIcon />
                     </IconButton>
