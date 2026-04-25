@@ -200,6 +200,30 @@ Motivo:
 - simplificar layout;
 - reducir ligeramente el bundle.
 
+### Rediseño base: Duel Terminal Pro
+
+Se aplico una segunda pasada visual sobre la app React para acercarla al mockup `design-previews/duel-terminal-pro.html`.
+
+Cambios principales:
+
+- `App` dejo de usar contenedores `styled` de MUI para el layout base y ahora usa clases SCSS (`App`, `shell`).
+- `public/index.html` ya no carga Bootstrap CSS/JS desde CDN; esto reduce dependencias visuales externas y evita conflictos con el nuevo sistema de estilos.
+- `MainNavbar` se simplifico: conserva MUI solo para el dialogo de ayuda y mueve la barra principal a markup propio con `main-navbar.scss`.
+- La busqueda ahora usa `AbortController`, cancela requests anteriores, mantiene solo la respuesta mas reciente y corta requests lentas despues de 15 segundos.
+- La UI muestra errores de API en un panel visible (`status-panel-error`) en vez de convertir todos los fallos en "No cards found".
+- `Overview` renderiza una grilla compacta de 12 cartas por pagina, paginacion propia y un modal de detalle mas visual con imagen grande, contador de variantes y stats estructurados.
+- Los estilos globales en `App.scss` definen la paleta, fondo, paneles, grilla, tiles, estados de carga, estados vacios, modal y responsive mobile.
+- Se agrego `src/components/main-navbar.scss` para aislar la navegacion, busqueda, selector de idioma y boton de ayuda.
+
+### Mockups cargados como referencia
+
+Se agrego la carpeta `design-previews/` con mockups HTML estaticos para guiar futuros redisenos:
+
+- `design-previews/duel-terminal-pro.html`: referencia principal. Propone una interfaz oscura tipo terminal de duelo profesional, con fondo cuadriculado, paneles sobrios, acentos dorados/azules, topbar sticky, grilla de cartas y modal de detalle.
+- `design-previews/cyber-duel-search.html`: referencia alternativa. Propone una direccion mas cyber/terminal, con verdes y cian, efecto scanline, una barra superior mas tecnica y una atmosfera mas experimental.
+
+Estos archivos son referencias visuales, no forman parte del bundle React. Si se usan para futuros cambios, conviene portar solo patrones concretos y validar responsive, accesibilidad y estados de datos reales.
+
 ### Test actualizado
 
 La prueba de CRA se reemplazo por una prueba de UI real:
@@ -238,6 +262,8 @@ El build aun muestra warnings de ESLint por imports sin usar:
 Estos estan principalmente en `src/components/main-navbar.js`.
 
 Ya se limpiaron varios imports sin usar de `src/pages/overview.js`.
+
+Actualizacion: con el rediseño actual, varios imports antiguos de `main-navbar.js` ya fueron eliminados. Si reaparecen warnings de ESLint, revisar primero imports no usados al mover componentes entre MUI y markup propio.
 
 ## Riesgos o Conflictos Posibles
 
@@ -287,6 +313,34 @@ Ademas, algunas cartas nuevas o filtradas pueden no tener traduccion completa.
 El proyecto aun usa `ReactDOM.render` en `src/index.js`. React 18 recomienda `createRoot`.
 
 No se cambio para evitar ampliar el alcance, pero deberia considerarse.
+
+### 7. Cambios futuros de diseño base
+
+El nuevo diseño depende mas de SCSS propio y menos de componentes MUI. Eso da mas control visual, pero tambien deja mas responsabilidad sobre responsive, accesibilidad y estados extremos.
+
+Posibles errores al cambiar el diseño base o crear futuros diseños:
+
+- la topbar sticky puede solaparse con contenido si cambian alturas, margenes o z-index;
+- el buscador puede romperse en mobile si el input, selector de idioma y boton no mantienen tracks responsivos;
+- textos largos o traducciones pueden salirse de tiles, botones, stats o modal;
+- cartas sin campos opcionales (`race`, `attribute`, `def`, `scale`, `linkval`, `archetype`) pueden dejar huecos visuales o errores si se eliminan las validaciones condicionales;
+- cartas con varias imagenes pueden perder el contador o el click para cambiar imagen;
+- cartas sin imagen esperada pueden romper la grilla si no se agrega fallback;
+- la paginacion propia puede deshabilitar mal los botones si cambia `rowsPerPage` o el calculo de `totalPages`;
+- animaciones, hover scaling o sombras pueden causar layout shift si se aplican fuera de `transform`;
+- aumentar la cantidad de cartas visibles por pagina puede afectar rendimiento y cargar demasiadas imagenes externas;
+- volver a layouts basados en mediciones dinamicas puede reactivar errores `ResizeObserver`;
+- cambiar la paleta puede bajar contraste en texto secundario, placeholders, botones deshabilitados y paneles de error;
+- mezclar Bootstrap, MUI `sx` y SCSS global puede causar especificidad dificil de depurar;
+- los mockups usan estilos estaticos y datos simulados, por lo que no garantizan comportamiento correcto con respuestas reales de la API.
+
+Recomendacion para futuros redisenos:
+
+1. Probar primero con datos reales de la API.
+2. Revisar mobile antes de tocar desktop fino.
+3. Mantener estados visibles para loading, error, sin resultados y request lenta.
+4. Evitar dependencias visuales globales por CDN si no son estrictamente necesarias.
+5. Validar build y test despues de cada cambio visual grande.
 
 ## Mejoras Recomendadas
 

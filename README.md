@@ -4,7 +4,7 @@
 
 ## About This Rebuild
 
-This branch includes a rebuild pass focused on making the app easier to run locally and improving the card search flow.
+This branch includes a rebuild pass focused on making the app easier to run locally, improving the card search flow, and moving the UI toward a darker Duel Terminal-style experience.
 
 Main improvements:
 
@@ -12,11 +12,33 @@ Main improvements:
 - Added safer YGOPRODeck API requests using `URLSearchParams`.
 - Added search by pressing `Enter`, in addition to clicking the search icon.
 - Added a loading state while card results are being fetched.
-- Prevented duplicate API requests from repeated clicks or key presses.
+- Replaced duplicate in-flight requests with an abortable request flow, so the latest search wins.
 - Replaced the dynamic Masonry layout with responsive CSS Grid to reduce `ResizeObserver` runtime overlay issues.
+- Rebuilt the base layout with a sticky top search bar, compact card grid, pagination controls, and a richer card detail modal.
+- Removed external Bootstrap CSS/JS from `public/index.html`; the current UI is driven by local React, MUI dialog primitives, and SCSS.
+- Added visible API error feedback instead of collapsing every failed request into an empty state.
+- Added design mockups under `design-previews/` for future UI reference.
 - Updated the default CRA test to verify the real app UI.
 
 See [PROJECT_REVIEW.md](./PROJECT_REVIEW.md) for the full technical review, findings, fixes, risks, and recommended next steps.
+
+## Current UI Direction
+
+The active design is based on `design-previews/duel-terminal-pro.html`.
+
+It uses:
+
+- a dark tactical game-board background with subtle grid lines;
+- a sticky top navigation/search bar;
+- compact card tiles with image-first scanning;
+- gold/blue accents for interaction states;
+- a modal detail view with a large card image and structured stats.
+
+There is also an alternate reference mockup:
+
+- `design-previews/cyber-duel-search.html`: a more cyber-terminal variant using green/cyan scanline styling, denser technical chrome, and a stronger terminal aesthetic.
+
+These mockups are static HTML references only. They are not part of the React runtime unless their patterns are manually ported into the app.
 
 ## Installation
 
@@ -75,6 +97,34 @@ Useful API behavior:
 - English is the default and does not require a `language` parameter.
 
 YGOPRODeck rate limits requests to 20 requests per second. The app triggers searches manually with Enter or the search icon, and blocks duplicate in-flight requests.
+
+The current request flow uses `AbortController`: when a newer search starts, the previous request is aborted and ignored. There is also a 15-second timeout that returns a visible error message if the API does not respond.
+
+## Design Risk Notes
+
+Changing the base design can introduce regressions that are easy to miss because this app renders remote card data with unpredictable names, descriptions, images, stats, and result counts.
+
+Watch especially for:
+
+- responsive layout breaks in the sticky navbar, search input, language selector, and pagination controls;
+- long card names or translated text overflowing compact tiles and modal stat panels;
+- card records without expected optional fields such as `race`, `attribute`, `def`, `scale`, `linkval`, `archetype`, or extra images;
+- modal content becoming taller than the viewport on small screens;
+- disabled pagination buttons looking clickable after restyling;
+- low contrast when changing the dark theme palette;
+- hover/animation effects causing layout shift in the card grid;
+- excessive image loading if future designs increase the number of visible cards per page;
+- reintroducing measurement-heavy layouts that can bring back `ResizeObserver` development overlays;
+- inconsistent language between English UI text and Spanish user-facing error/loading states.
+
+Before merging future design changes, test at least:
+
+```bash
+npm run build
+npm test -- --watchAll=false
+```
+
+Then manually check mobile and desktop widths with searches such as `dragon`, `dark magician`, `blue-eyes`, and a no-result query.
 
 ## Troubleshooting
 

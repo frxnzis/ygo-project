@@ -1,21 +1,8 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { MainNavbar } from './components/main-navbar';
 import { Overview } from './pages/overview'
 import PropTypes from 'prop-types';
-import { styled } from '@mui/material/styles';
 import './App.scss';
-
-const MainLayoutRoot = styled('div')(({ theme }) => ({
-  backgroundColor: 'lightgrey',
-  height: '100%',
-  paddingTop: 0
-}));
-
-const ContentLayout = styled('div')(({ theme }) => ({
-  height: '100%',
-  margin: 40,
-  backgroundColor: 'lightgrey',
-}));
 
 export default function App({ children }) {
 
@@ -25,22 +12,20 @@ export default function App({ children }) {
     error: ''
   });
 
-  const callbackFunction = (data) => {
+  const callbackFunction = useCallback((data) => {
     setCardsSearch((previousState) => ({
       ...previousState,
       ...data
     }));
-  }
+  }, []);
 
   return (
-    <MainLayoutRoot>
+    <div className="App">
       <MainNavbar parentCallback={callbackFunction} />
-      <ContentLayout>
+      <div className="shell">
         <Overview cardsSearch={cardsSearch} ></Overview>
-      </ContentLayout>
-
-
-    </MainLayoutRoot>
+      </div>
+    </div>
   )
 };
 

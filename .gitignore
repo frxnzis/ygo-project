@@ -25,3 +25,7 @@ out
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+dev-server*.log
+.history
+.git
+.codex

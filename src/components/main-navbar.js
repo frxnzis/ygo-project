@@ -1,97 +1,33 @@
-import { useCallback, useEffect, useRef, useState, createContext, forwardRef } from 'react';
-import { styled, alpha } from '@mui/material/styles';
-import AppBar from '@mui/material/AppBar';
-import Box from '@mui/material/Box';
-import Toolbar from '@mui/material/Toolbar';
-import Typography from '@mui/material/Typography';
-import InputBase from '@mui/material/InputBase';
-import FilterAltIcon from '@mui/icons-material/FilterAlt';
-import MenuItem from '@mui/material/MenuItem';
-import Menu from '@mui/material/Menu';
-import LanguageIcon from '@mui/icons-material/Language';
-import SearchIcon from '@mui/icons-material/Search';
-import HelpIcon from '@mui/icons-material/Help';
-import IconButton from '@mui/material/IconButton';
-
+import { useCallback, useEffect, useRef, useState, forwardRef } from 'react';
 import Dialog from '@mui/material/Dialog';
 import DialogContent from '@mui/material/DialogContent';
-import DialogContentText from '@mui/material/DialogContentText';
 import Slide from '@mui/material/Slide';
-
 import YGOlogo from '../assets/images/ygo.png'
+import './main-navbar.scss';
 
-import useMediaQuery from '@mui/material/useMediaQuery';
-import { useTheme } from '@mui/material/styles';
-
-const Transition2 = forwardRef(function Transition(props, ref) {
+const Transition = forwardRef(function Transition(props, ref) {
     return <Slide direction="up" ref={ref} {...props} />;
 });
-
-
-const Search = styled('div')(({ theme }) => ({
-    position: 'relative',
-    borderRadius: theme.shape.borderRadius,
-    backgroundColor: alpha(theme.palette.common.white, 0.15),
-    '&:hover': {
-        backgroundColor: alpha(theme.palette.common.white, 0.25),
-    },
-    width: '100%',
-    height: '100%',
-    [theme.breakpoints.up('sm')]: {
-        marginLeft: 'auto',
-        marginRight: 0,
-        paddingY: 0,
-        marginY: 0,
-        width: '30%',
-        height: 37,
-        textAlign: 'center'
-    },
-    textAlign: 'center'
-
-}));
-
-
-const StyledInputBase = styled(InputBase)(({ theme }) => ({
-    color: 'inherit',
-    '& .MuiInputBase-input': {
-        padding: theme.spacing(1, 1, 1, 1),
-        // vertical padding + font size from searchIcon
-        paddingLeft: `calc(1em + ${theme.spacing(0)})`,
-        transition: theme.transitions.create('width'),
-        width: '100%',
-        [theme.breakpoints.up('sm')]: {
-            width: '100%',
-            '&:focus': {
-                width: '100%',
-            },
-        },
-    },
-}));
-
-const Name = createContext();
 
 export const MainNavbar = (props) => {
     const { parentCallback } = props;
 
-    const theme = useTheme();
-    const isMobile = useMediaQuery(theme.breakpoints.up('sm'));
-
     const [inputSearch, setInputSearch] = useState('');
-    const [anchorEl, setAnchorEl] = useState(null);
     const [language, setLanguage] = useState('');
-    const [open, setOpen] = useState(false);
+    const [openHelp, setOpenHelp] = useState(false);
     const [loading, setLoading] = useState(false);
-    const searchInProgress = useRef(false);
+    const activeRequest = useRef(null);
+    const latestRequestId = useRef(0);
     const lastSubmittedSearch = useRef('');
     const isFirstLanguageRender = useRef(true);
+    const languageRef = useRef('');
 
     const sendData = useCallback((data) => {
         parentCallback(data);
     }, [parentCallback]);
 
     const handleChange = (event) => {
-        const input = event.target.value;
-        setInputSearch(input);
+        setInputSearch(event.target.value);
     }
 
     const handleKeyDown = (event) => {
@@ -100,28 +36,22 @@ export const MainNavbar = (props) => {
         }
     }
 
-    const handleMenu = (event) => {
-        setAnchorEl(event.currentTarget);
+    const handleOpenHelp = () => {
+        setOpenHelp(true);
     };
 
-    const handleClose = () => {
-        setAnchorEl(null);
+    const handleCloseHelp = () => {
+        setOpenHelp(false);
     };
 
-    const handleOpenDialog = () => {
-        setOpen(true);
-    };
-
-    const handleCloseDialog = () => {
-        setOpen(false);
+    const handleLanguageChange = (lang) => {
+        setLanguage(lang);
+        languageRef.current = lang;
     };
 
     const onSearch = useCallback(async (searchValue) => {
-        if (searchInProgress.current) {
-            return;
-        }
-
         if (!searchValue) {
+            sendData({ data: [], loading: false, error: '' });
             return;
         }
 
@@ -130,31 +60,67 @@ export const MainNavbar = (props) => {
             misc: 'yes'
         });
 
-        if (language) {
-            params.set('language', language);
+        if (languageRef.current) {
+            params.set('language', languageRef.current);
         }
 
-        searchInProgress.current = true;
+        if (activeRequest.current) {
+            activeRequest.current.abort();
+        }
+
+        const controller = new AbortController();
+        const requestId = latestRequestId.current + 1;
+        let timedOut = false;
+        latestRequestId.current = requestId;
+        activeRequest.current = controller;
+
         setLoading(true);
-        sendData({ loading: true, error: '' });
+        sendData({ data: [], loading: true, error: '' });
+
+        const timeoutId = window.setTimeout(() => {
+            timedOut = true;
+            controller.abort();
+        }, 15000);
 
         try {
-            const response = await fetch(`https://db.ygoprodeck.com/api/v7/cardinfo.php?${params.toString()}`);
-            const data = await response.json();
+            const response = await fetch(
+                `https://db.ygoprodeck.com/api/v7/cardinfo.php?${params.toString()}`,
+                { signal: controller.signal }
+            );
+            const data = await response.json().catch(() => null);
 
             if (!response.ok) {
-                const error = (data && data.error) || (data && data.message) || response.statusText;
-                throw new Error(error);
+                const message = data?.error || data?.message || response.statusText || 'API request failed';
+                throw new Error(message);
             }
 
-            sendData({ ...data, loading: false, error: '' });
+            // La API devuelve { data: [...] } o directamente un array
+            const cardData = Array.isArray(data) ? data : (data?.data || []);
+
+            if (requestId === latestRequestId.current) {
+                sendData({ data: cardData, loading: false, error: '' });
+            }
         } catch (error) {
-            sendData({ data: [], loading: false, error: error.message });
+            if (requestId === latestRequestId.current) {
+                const message = timedOut
+                    ? 'La API tardó demasiado en responder. Intenta de nuevo en unos segundos.'
+                    : error.message || 'No se pudo completar la búsqueda.';
+
+                console.error('Search error:', message);
+                sendData({ data: [], loading: false, error: message });
+            }
         } finally {
-            searchInProgress.current = false;
-            setLoading(false);
+            window.clearTimeout(timeoutId);
+
+            if (activeRequest.current === controller) {
+                activeRequest.current = null;
+            }
+
+            if (requestId === latestRequestId.current) {
+                setLoading(false);
+            }
         }
-    }, [language, sendData]);
+    }, [sendData]);
 
     const handleSearch = useCallback(() => {
         const searchValue = inputSearch.trim();
@@ -168,198 +134,120 @@ export const MainNavbar = (props) => {
             return;
         }
 
-        onSearch(lastSubmittedSearch.current);
+        if (lastSubmittedSearch.current) {
+            onSearch(lastSubmittedSearch.current);
+        }
     }, [language, onSearch]);
-    
+
+    useEffect(() => {
+        return () => {
+            if (activeRequest.current) {
+                activeRequest.current.abort();
+            }
+        };
+    }, []);
 
     return (
+        <>
+            <nav className="topbar" aria-label="Primary">
+                <div className="brand">
+                    <img src={YGOlogo} alt="Yu-Gi-Oh! Logo" />
+                    <div className="brand-mark">
+                        <span className="brand-title">YGO Project</span>
+                        <span className="brand-subtitle">Card API Search</span>
+                    </div>
+                </div>
 
-        <Box sx={{ flexGrow: 1 }}>
+                <div className="searchbar" role="search">
+                    <input 
+                        value={inputSearch}
+                        onChange={handleChange}
+                        onKeyDown={handleKeyDown}
+                        aria-label="Search cards" 
+                        placeholder="Search cards by name"
+                    />
+                    <select 
+                        className="select" 
+                        aria-label="Language" 
+                        value={language} 
+                        onChange={(e) => handleLanguageChange(e.target.value)}
+                    >
+                        <option value="">🇬🇧 English</option>
+                        <option value="fr">🇫🇷 French</option>
+                        <option value="de">🇩🇪 German</option>
+                        <option value="it">🇮🇹 Italian</option>
+                    </select>
+                    <button 
+                        className="search-button" 
+                        type="button" 
+                        onClick={handleSearch} 
+                        disabled={loading}
+                    >
+                        {loading ? 'Searching...' : 'Search'}
+                    </button>
+                </div>
 
-            {/* CARDS FILTER */}
+                <button 
+                    className="icon-button" 
+                    type="button" 
+                    onClick={handleOpenHelp} 
+                    aria-label="Help" 
+                    title="Help"
+                >
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2"></circle>
+                        <path d="M9.7 9a2.5 2.5 0 1 1 4.4 1.6c-.9.8-1.7 1.3-1.7 2.7" stroke="currentColor" strokeWidth="2" strokeLinecap="round"></path>
+                        <path d="M12 17h.01" stroke="currentColor" strokeWidth="3" strokeLinecap="round"></path>
+                    </svg>
+                </button>
+            </nav>
+
             <Dialog
                 fullWidth={true}
                 maxWidth={'xs'}
-                open={open}
-                TransitionComponent={Transition2}
+                open={openHelp}
+                TransitionComponent={Transition}
                 keepMounted
-                onClose={handleCloseDialog}
+                onClose={handleCloseHelp}
                 scroll={'paper'}
                 PaperProps={{
                     style: {
-                        backgroundColor: 'white',
+                        backgroundColor: 'var(--panel)',
                         boxShadow: 'none',
-                        borderRadius: '15px',
-                        border: '1px solid #555555',
-                        borderColor: 'white',
-                        maxHeight: 'auto'
+                        borderRadius: '8px',
+                        border: '1px solid var(--line)',
                     },
                 }}
             >
-
-                <DialogContent className={'row m-0 p-0'} variant="outlined">
-                    <div className={'col-12 text-left m-0 p-4'} >
-                        <h5><p><b>Welcome to the Yu-Gi-Oh! card finder</b></p></h5>
-                        <p><b>🔎  Examples of card searches:</b></p>
-                        <ul>
-                            <li>Magician</li>
-                            <li>Dragon</li>
-                            <li>Zombie</li>
-                            <li>Warrior</li>
-                            <li>Exodia</li>
-                        </ul>
-                        {/* Firma */}
-                        <div style={{
-                            marginTop: '2rem',
-                            textAlign: 'center',
-                            fontStyle: 'italic',
-                            fontSize: '0.9rem',
-                            color: '#666',
-                            borderTop: '1px solid #ddd',
-                            paddingTop: '1rem',
-                            position: 'relative'
-                        }}>
-                            Made with <span style={{ color: '#e25555' }}>❤️</span> by 
-                            <span style={{ color: '#585858', fontWeight: 'bold', marginLeft: '0.3rem' }}>Francis</span>
-                        </div>
+                <DialogContent>
+                    <h2 style={{ marginTop: 0, color: 'var(--text)' }}>Welcome to YGO Project</h2>
+                    <p style={{ color: 'var(--muted)' }}>
+                        A professional card search tool for Yu-Gi-Oh! players.
+                    </p>
+                    <p style={{ color: 'var(--muted)', fontWeight: 'bold' }}>
+                        📝 Search examples:
+                    </p>
+                    <ul style={{ color: 'var(--muted)' }}>
+                        <li>Dark Magician</li>
+                        <li>Blue-Eyes</li>
+                        <li>Exodia</li>
+                        <li>Dragon</li>
+                        <li>Warrior</li>
+                    </ul>
+                    <div style={{
+                        marginTop: '2rem',
+                        textAlign: 'center',
+                        fontStyle: 'italic',
+                        fontSize: '0.9rem',
+                        color: 'var(--muted)',
+                        borderTop: '1px solid var(--line)',
+                        paddingTop: '1rem',
+                    }}>
+                        Made with ❤️ by Francis <br />
+                        Modify with ❤️ by Khryztiam
                     </div>
                 </DialogContent>
             </Dialog>
-
-            {/* APP BAR */}
-            <AppBar position="static" style={{ background: '#3d5afe' }}>
-                <Toolbar>
-                    {/* <IconButton
-                        size="large"
-                        edge="start"
-                        color="inherit"
-                        aria-label="open drawer"
-                        sx={{ mr: 2 }}
-                    >
-                        <MenuIcon />
-                    </IconButton>
-                    */}
-
-                    {/* LOGO */}
-                    <img
-                        title={'Logo'}
-                        src={YGOlogo}
-                        srcSet={YGOlogo}
-                        alt={'Yu-Gi-Oh! Logo'}
-                        loading="eager"
-                        style={{
-                            display: 'block',
-                            width: isMobile ? '8em' : '20%',
-                            cursor: 'pointer',
-                            marginRight: isMobile ? 0 : 4
-                        }}
-                    />
-
-                    {/* SEARCH INPUT */}
-                    <Search 
-                     style={{
-                        margin: 'auto',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        width: '400px',
-                    }}
-                    >
-                        <StyledInputBase
-                        
-                        onChange={handleChange}
-                        onKeyDown={handleKeyDown}
-                        placeholder="Search cards…"
-                        style={{
-                        width: '100%',
-                        paddingRight: '40px',
-                        }}
-                        />
-                    <IconButton
-                        size="small"
-                        aria-label="language"
-                        aria-controls="menu-appbar"
-                        aria-haspopup="true"
-                        onClick={handleSearch}
-                        color="inherit"
-                        title='Search cards'
-                        disabled={loading}
-                    >
-                        <SearchIcon />
-                    </IconButton>
-                  
-                    </Search>
-
-                    {/* FILTER */}
-                    {/*
-                    <IconButton
-                        sx={{ marginLeft: 0, marginRight: 'auto' }}
-                        size="small"
-                        aria-label="language"
-                        aria-controls="menu-appbar"
-                        aria-haspopup="true"
-                        onClick={() => handleOpenDialog()}
-                        color="inherit"
-                    >
-                        <FilterAltIcon />
-                    </IconButton>
-                    */}
-
-                    {/* LANGUAGE */}
-                    <IconButton
-                        size="small"
-                        aria-label="language"
-                        aria-controls="menu-appbar"
-                        aria-haspopup="true"
-                        onClick={handleMenu}
-                        color="inherit"
-                        title='Select Language'
-                    >
-                        <LanguageIcon />
-                    </IconButton>
-
-                     {/* HELP */}
-                    <IconButton
-                        size="small"
-                        aria-label="help"
-                        aria-controls="menu-appbar"
-                        aria-haspopup="true"
-                        onClick={handleOpenDialog}
-                        color="inherit"
-                        title='Help'
-                    >
-                        <HelpIcon />
-                    </IconButton>
-
-                    <Menu
-                        id="menu-appbar"
-                        anchorEl={anchorEl}
-                        anchorOrigin={{
-                            vertical: 'top',
-                            horizontal: 'right',
-                        }}
-                        keepMounted
-                        transformOrigin={{
-                            vertical: 'top',
-                            horizontal: 'right',
-                        }}
-                        open={Boolean(anchorEl)}
-                        onClose={handleClose}
-                    >
-                        <MenuItem onClick={() => { setLanguage(''); setAnchorEl(null); }}>🇬🇧 English</MenuItem>
-                        <MenuItem onClick={() => { setLanguage('fr'); setAnchorEl(null); }}>🇫🇷 French</MenuItem>
-                        <MenuItem onClick={() => { setLanguage('de'); setAnchorEl(null); }}>🇩🇪 German</MenuItem>
-                        <MenuItem onClick={() => { setLanguage('it'); setAnchorEl(null); }}>🇮🇹 Italian</MenuItem>
-                        <MenuItem onClick={() => { setLanguage('pt'); setAnchorEl(null); }}>🇵🇹 Portuguese</MenuItem>
-                    </Menu>
-
-                </Toolbar>
-            </AppBar>
-        </Box >
-
-
-
+        </>
     );
 };
-
-export { Name };
